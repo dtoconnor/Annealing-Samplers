@@ -2,7 +2,7 @@
 A simple repository for various annealing models in the transverse-field Ising model.
 
 ## Setup
-The code in this repo was tested and run in Atom's Juno IDE. The quick install file outlines the packages that are needed to run the files.
+The code in this repo was tested and run in Atom's Juno IDE. The ```quick_install.jl``` file outlines the packages that are needed to run the files.
 
 ## Samplers
 All current tested samplers have examples shown in ```example.jl```, with a testing tool to profile and benchmark the samplers in ```testing.jl```.

@@ -16,6 +16,7 @@ module SVMCTF
     using Random
     using Distributed
     using LinearAlgebra
+    using SharedArrays
 
     function anneal!(spin_vector::Array{Float64, 1},
                     nbs_idxs::Array{Int64, 2},

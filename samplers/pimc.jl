@@ -20,7 +20,7 @@ module PIMC
     using Random
     using Distributed
     using LinearAlgebra
-
+    using SharedArrays
     function anneal!(spin_lattice::Array{Float64, 2},
                     nbs_idxs::Array{Int64, 2},
                     nbs_vals::Array{Float64, 2},

@@ -3,6 +3,7 @@ module SamplingTools
     using LinearAlgebra
     using Statistics
     using Base64
+    using Interpolations
 
     function hj_info(h::Dict, J::Dict)
         n = length(h)
@@ -10,7 +11,7 @@ module SamplingTools
         degrees = zeros(Int64, n)
         j_full = Dict()
         for ((x, y), val) in J
-            M[x, y] = val
+            M[sort([x, y])...] = val
             degrees[x] += 1
             degrees[y] += 1
         end
@@ -19,7 +20,7 @@ module SamplingTools
             M[key, key] = val
             j_full[(key, key)] = val
         end
-        return M, merge(J, j_full), degrees
+        return Array{Float64, 2}(UpperTriangular(M)), merge(J, j_full), degrees
     end
 
 
@@ -146,10 +147,10 @@ module SamplingTools
 
 
     function ising_energy(spin_vector::Array{Float64, 1},
-                          JM::Array{Float64, 2},
-        )
-        b = diagm(diag(JM))
-        return (spin_vector'* ((JM - b) * spin_vector)) + sum(b * spin_vector)
+                          JM::Array{Float64, 2}; b_field=1.0
+        )::Float64
+        b = diag(JM)
+        return b_field * ((spin_vector'* ((JM - diagm(b)) * spin_vector)) + (b' * spin_vector))
     end
 
 
@@ -323,9 +324,36 @@ module SamplingTools
     end
 
 
+    function DQA_schedule(k::Int, nspins::Int, a_schedule::Array{Float64, 1},
+                          b_schedule::Array{Float64, 1}; sx=0.2, cx=0.0, c1=0.0)
+        num_steps = length(a_schedule)
+        new_steps = convert(Int64, ceil(num_steps / (1.0 - sx)))
+        s_old = LinRange(sx, 1.0, num_steps)
+        s = collect(LinRange(0.0, 1.0, new_steps))
+        ak_sch = collect(LinRange(cx, c1, num_steps))
+        a_dqa_dict = Dict()
+        b_dqa_dict = Dict()
+        for i = 1:nspins
+            a_sch = deepcopy(a_schedule)
+            b_sch = deepcopy(b_schedule)
+            if i == k
+                afn = LinearInterpolation(s_old, ak_sch, extrapolation_bc=Flat())
+                a_dqa_dict[i] = afn.(s)
+                b_dqa_dict[i] = LinRange(-sx/(1.0-sx), 1.0, new_steps)
+            else
+                afn = LinearInterpolation(s_old, a_sch, extrapolation_bc=Flat())
+                bfn = LinearInterpolation(s_old, b_sch, extrapolation_bc=Flat())
+                a_dqa_dict[i] = afn.(s)
+                b_dqa_dict[i] = bfn.(s)
+            end
+        end
+        return a_dqa_dict, b_dqa_dict
+    end
+
+
     export rotor_aggregation, discrete_aggregation, ising_energy,
             generate_nbr, default_temp_range, hj_info, shuffle,
             generate_nbr_dict, bootstrap, add_cross_talk, add_noise,
             hj_info!, generate_nbr!, pimc_aggregation, PFC_dict,
-            energy_ranges
+            energy_ranges, DQA_schedule
 end

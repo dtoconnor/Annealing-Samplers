@@ -14,7 +14,10 @@ module SVMC
                             add_cross_talk, hj_info!, generate_nbr!
     using Random
     using Distributed
+    using Profile
+    using BenchmarkTools
     using LinearAlgebra
+    using SharedArrays
 
     function anneal!(spin_vector::Array{Float64, 1},
                     nbs_idxs::Array{Int64, 2},

@@ -47,8 +47,8 @@ function main()
     b_sch= collect(LinRange(0, 1, num_sweeps))
 
     # schedule_data = npzread("data\\DWAVE_schedule.npz")
-    # a_fn = LinearInterpolation(schedule_data[:, 1], 0.5.*schedule_data[:, 2])
-    # b_fn = LinearInterpolation(schedule_data[:, 1], 0.5.*schedule_data[:, 3])
+    # a_fn = SamplingTools.monotonic_interpolation(schedule_data[:, 1], 0.5.*schedule_data[:, 2])
+    # b_fn = SamplingTools.monotonic_interpolation(schedule_data[:, 1], 0.5.*schedule_data[:, 3])
     # a_sch = a_fn.(collect(LinRange(0, 1, num_sweeps)))
     # b_sch = b_fn.(collect(LinRange(0, 1, num_sweeps)))
 
@@ -96,26 +96,32 @@ end
 function main_dynamics()
     d = 0.01
     N = 2
+    nspins = 2*N
     h, j = SamplingTools.PFC_dict(d, N=N)
     num_samples = 1000
     temp = 0.01226 * 1.380649e-23 / (1e9 * 6.62607015e-34)
-
     s = collect(0:0.001:1)
     num_steps = length(s)
+
     max_field = 1.0
     a_sch= max_field .* (1.0 .- s)
     b_sch= max_field .* s
+    a_fn = SamplingTools.monotonic_interpolation(s, a_sch)
+    b_fn = SamplingTools.monotonic_interpolation(s, b_sch)
 
     # schedule_data = npzread("data\\DWAVE_schedule.npz")
-    # a_fn = LinearInterpolation(schedule_data[:, 1], 0.5.*schedule_data[:, 2])
-    # b_fn = LinearInterpolation(schedule_data[:, 1], 0.5.*schedule_data[:, 3])
-    # a_sch = a_fn.(collect(LinRange(0, 1, num_steps)))
-    # b_sch = b_fn.(collect(LinRange(0, 1, num_steps)))
+    # a_fn = SamplingTools.monotonic_interpolation(schedule_data[:, 1], 0.5.*schedule_data[:, 2])
+    # b_fn = SamplingTools.monotonic_interpolation(schedule_data[:, 1], 0.5.*schedule_data[:, 3])
+    # a_sch = a_fn.(s)
+    # b_sch = b_fn.(s)
 
-    # DQA schedule
-    a_sch, b_sch = SamplingTools.DQA_schedule(3, 2*N, a_sch, b_sch,
-                                              sx=0.2, cx=0.0, c1=0.0)
-
+    # # DQA schedule
+    # a_sch, b_sch = SamplingTools.DQA_schedule(1, 2*N, a_sch, b_sch,
+    #                                           sx=0.2, cx=0.0, c1=0.0)
+    # # convert to functions
+    # a_fn = Dict([(i,  SamplingTools.monotonic_interpolation(s, a_sch[i])) for i=1:nspins])
+    # b_fn = Dict([(i,  SamplingTools.monotonic_interpolation(s, b_sch[i])) for i=1:nspins])
+    #
     run_time = 1000.0
     anneal_time = 1000.0
     # open system enables multi-threading for parallel computation
@@ -123,12 +129,13 @@ function main_dynamics()
     friction_constant = 2e-2
 
     # anneal_time = 1000.0
-    results, sol = SpinVectorDynamics.solve(h, j, anneal_time=anneal_time,
-                                         run_time=run_time, a_sch=a_sch,
-                                         b_sch=b_sch, temp=temp,
+    results, sol = SpinVectorO2Dynamics.solve(h, j, anneal_time=anneal_time,
+                                         run_time=run_time, a_fn=a_fn,
+                                         b_fn=b_fn, temp=temp,
                                          friction_constant=friction_constant,
                                          trajectories=num_samples,
-                                         open_system=open_sys)
+                                         open_system=open_sys, abstol=1e-8,
+                                         reltol=1e-6)
 
     # ts is the times at which are saved on the ODE solver
     ts = LinRange(0.0, run_time, num_steps)

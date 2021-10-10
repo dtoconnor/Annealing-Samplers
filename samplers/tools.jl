@@ -337,12 +337,12 @@ module SamplingTools
             a_sch = deepcopy(a_schedule)
             b_sch = deepcopy(b_schedule)
             if i == k
-                afn = LinearInterpolation(s_old, ak_sch, extrapolation_bc=Flat())
+                afn = monotonic_interpolation(s_old, ak_sch)
                 a_dqa_dict[i] = afn.(s)
                 b_dqa_dict[i] = LinRange(-sx/(1.0-sx), 1.0, new_steps)
             else
-                afn = LinearInterpolation(s_old, a_sch, extrapolation_bc=Flat())
-                bfn = LinearInterpolation(s_old, b_sch, extrapolation_bc=Flat())
+                afn = monotonic_interpolation(s_old, a_sch)
+                bfn = monotonic_interpolation(s_old, b_sch)
                 a_dqa_dict[i] = afn.(s)
                 b_dqa_dict[i] = bfn.(s)
             end
@@ -351,9 +351,14 @@ module SamplingTools
     end
 
 
+    function monotonic_interpolation(x, y)
+        return extrapolate(interpolate(x, y, SteffenMonotonicInterpolation()), Flat())
+    end
+
+
     export rotor_aggregation, discrete_aggregation, ising_energy,
             generate_nbr, default_temp_range, hj_info, shuffle,
             generate_nbr_dict, bootstrap, add_cross_talk, add_noise,
             hj_info!, generate_nbr!, pimc_aggregation, PFC_dict,
-            energy_ranges, DQA_schedule
+            energy_ranges, DQA_schedule, monotonic_interpolation
 end
